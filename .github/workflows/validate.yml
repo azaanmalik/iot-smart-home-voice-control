@@ -1,0 +1,25 @@
+name: Validate IoT source
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Wokwi diagram and source safeguards
+        run: |
+          python3 -m json.tool simulation/diagram.json > /dev/null
+          test -f firmware/config.example.h
+          test -f firmware/sketch.ino
+          test -f web/voice_control.html
+          ! grep -R -n 'setInsecure()' firmware/
+          ! grep -R -n 'Iotpassword123' firmware/ web/
+          python3 - <<'PY'
+          import json
+          data=json.load(open('simulation/diagram.json'))
+          assert any(c[0]=='esp:23' for c in data['connections'])
+          print('IoT static validation passed')
+          PY
